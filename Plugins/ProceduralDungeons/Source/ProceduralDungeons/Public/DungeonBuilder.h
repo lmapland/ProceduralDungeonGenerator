@@ -11,6 +11,7 @@
 
 class UDataTable;
 class UDungeonData;
+class UDungeonItemsHandler;
 
 /**
  * 
@@ -22,7 +23,7 @@ class PROCEDURALDUNGEONS_API UDungeonBuilder : public UObject
 	
 public:
 	UFUNCTION(BlueprintCallable)
-	void Setup(UDataTable* InRooms, UDataTable* InOpenings, UDataTable* InBarriers);
+	void Setup(UDataTable* InRooms, UDataTable* InOpenings, UDataTable* InBarriers, UDataTable* InItems, UDungeonItemsHandler* InItemsHandler);
 
 	UFUNCTION(BlueprintCallable)
 	void TestBuildDungeon();
@@ -60,6 +61,8 @@ private:
 	UDataTable* Rooms;
 	UDataTable* Openings;
 	UDataTable* Barriers;
+	UDataTable* Items;
+	UDungeonItemsHandler* ItemsHandler;
 	UDungeonData* DungeonData;
 	float DefaultRoomSize = 1000.f;
 

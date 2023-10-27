@@ -12,9 +12,6 @@ struct FRoom : public FTableRowBase
 	FName RowName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TSubclassOf<UStaticMesh> mesh_ref;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<AActor> bp_ref;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -23,6 +20,10 @@ struct FRoom : public FTableRowBase
 	// Contains unique ids for the FOpening DataTable
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FString> Openings;
+
+	// Contains unique ids for the FDungeonItem DataTable
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FString> ItemNames;
 
 	// True if Openings array is empty
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

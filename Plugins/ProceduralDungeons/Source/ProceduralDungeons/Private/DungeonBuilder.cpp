@@ -2,21 +2,23 @@
 
 
 #include "DungeonBuilder.h"
-#include "Engine/StaticMeshSocket.h"
 #include "Engine/DataTable.h"
+#include "DungeonItemsHandler.h"
 #include "DungeonData.h"
 #include "TileBase.h"
 
 #include "DrawDebugHelpers.h"
 
-void UDungeonBuilder::Setup(UDataTable* InRooms, UDataTable* InOpenings, UDataTable* InBarriers)
+void UDungeonBuilder::Setup(UDataTable* InRooms, UDataTable* InOpenings, UDataTable* InBarriers, UDataTable* InItems, UDungeonItemsHandler* InItemsHandler)
 {
 	Rooms = InRooms;
 	Openings = InOpenings;
 	Barriers = InBarriers;
+	Items = InItems;
+	ItemsHandler = InItemsHandler;
 	
 	DungeonData = NewObject<UDungeonData>();
-	DungeonData->Setup(Rooms, Openings, Barriers);
+	DungeonData->Setup(Rooms, Openings, Barriers, Items);
 }
 
 void UDungeonBuilder::TestBuildDungeon()
@@ -45,16 +47,41 @@ void UDungeonBuilder::TestBuildDungeon()
 	FRotator RotationToSpawn = GetSpawnRotation(RoomOpenings[StartingSocket]->Orientation, RoomOpenings2[0]->Orientation, SpawnedRoom->GetActorRotation());
 	DrawDebugSphere(GetWorld(), RoomLocation + SocketOffset, 20.f, 4, FColor::Red, true, -1.f, (uint8)0U, 1.f);
 
-	UE_LOG(LogTemp, Warning, TEXT("Opening1 Location: [%f, %f, %f]"), (RoomLocation + SocketOffset).X, (RoomLocation + SocketOffset).Y, (RoomLocation + SocketOffset).Z);
+	//UE_LOG(LogTemp, Warning, TEXT("Opening1 Location: [%f, %f, %f]"), (RoomLocation + SocketOffset).X, (RoomLocation + SocketOffset).Y, (RoomLocation + SocketOffset).Z);
 	FVector LocationOffset = GetPlacementOffset(RotationToSpawn, RoomOpenings2[0]->Location);
-	UE_LOG(LogTemp, Warning, TEXT("LocationOffset: [%f, %f, %f]"), LocationOffset.X, LocationOffset.Y, LocationOffset.Z);
+	//UE_LOG(LogTemp, Warning, TEXT("LocationOffset: [%f, %f, %f]"), LocationOffset.X, LocationOffset.Y, LocationOffset.Z);
 
 	FVector LocationToSpawn = RoomLocation + SocketOffset + LocationOffset;
-	UE_LOG(LogTemp, Warning, TEXT("Final Location: [%f, %f, %f]"), LocationToSpawn.X, LocationToSpawn.Y, LocationToSpawn.Z);
+	//UE_LOG(LogTemp, Warning, TEXT("Final Location: [%f, %f, %f]"), LocationToSpawn.X, LocationToSpawn.Y, LocationToSpawn.Z);
 
 	ATileBase* SpawnedRoom2 = GetWorld()->SpawnActor<ATileBase>(Room2->bp_ref, LocationToSpawn, RotationToSpawn);
 	FTransform RoomTransform2 = SpawnedRoom2->GetFloorMesh()->GetSocketTransform(FName(RoomOpenings2[0]->SocketName), ERelativeTransformSpace::RTS_World);
 	DrawDebugSphere(GetWorld(), RoomTransform2.GetLocation(), 20.f, 4, FColor::Green, true, -1.f, (uint8)0U, 1.f);
+
+	// spawn items in Room2
+	for (FString ItemName : Room2->ItemNames)
+	{
+		FDungeonItem* Item = DungeonData->GetItem(FName(ItemName));
+		if (Item == nullptr) continue;
+
+		float ToSpawn = FMath::RandRange(0.f, 1.f);
+		if (ToSpawn > Item->SpawnLikelihood) continue; // Don't spawn the item
+
+		FRotator Rotation = RotationToSpawn + Item->Rotation;
+		Rotation.Yaw = CorrectDegrees(Rotation.Yaw);
+		//UE_LOG(LogTemp, Warning, TEXT("Room Rotation: [%f, %f, %f]"), RotationToSpawn.Pitch, RotationToSpawn.Yaw, RotationToSpawn.Roll);
+		//UE_LOG(LogTemp, Warning, TEXT("Item Rotation: [%f, %f, %f]"), Item->Rotation.Pitch, Item->Rotation.Yaw, Item->Rotation.Roll);
+		//UE_LOG(LogTemp, Warning, TEXT("Rotation: %f + %f = %f"), RotationToSpawn.Yaw, Item->Rotation.Yaw, Rotation.Yaw);
+
+		//UE_LOG(LogTemp, Warning, TEXT("Initial Item Location X,Y: [%f, %f]"), Item->Location.X, Item->Location.Y);
+		FVector ItemLocation = GetPlacementOffset(RotationToSpawn, Item->Location);
+		FVector Location = LocationToSpawn + ItemLocation;
+		//UE_LOG(LogTemp, Warning, TEXT("Room Location: [%f, %f, %f]"), LocationToSpawn.X, LocationToSpawn.Y, LocationToSpawn.Z);
+		//UE_LOG(LogTemp, Warning, TEXT("Item Location: [%f, %f, %f]"), ItemLocation.X, ItemLocation.Y, ItemLocation.Z);
+		//UE_LOG(LogTemp, Warning, TEXT("Location: %f + %f = %f"), LocationToSpawn.Y, ItemLocation.Y, Location.Y);
+
+		ItemsHandler->HandleNewItem(Item->Key, Location, Rotation);
+	}
 }
 
 void UDungeonBuilder::BuildPaperDungeon(FPaperDungeon& PaperDungeon)
@@ -79,6 +106,36 @@ void UDungeonBuilder::BuildPaperDungeon(FPaperDungeon& PaperDungeon)
 	}
 
 	PaperDungeon.Print();
+
+	// Spawn any items necessary
+	// Check that the DungeonItems DT is not empty: if it is; no need to do any of this.
+	if (DungeonData->GetItemArraySize() == 0) return;
+
+	for (const TArray<FPaperDungeonTile>& Row : PaperDungeon.Layout)
+	{
+		for (const FPaperDungeonTile& Tile : Row)
+		{
+			if (!Tile.IsOccupied) continue;
+
+			FRoom* Room = DungeonData->GetRoom(Tile.RoomName);
+
+			for (FString ItemName : Room->ItemNames)
+			{
+				FDungeonItem* Item = DungeonData->GetItem(FName(ItemName));
+				if (Item == nullptr) continue;
+				
+				float ToSpawn = FMath::RandRange(0.f, 1.f);
+				if (ToSpawn > Item->SpawnLikelihood) continue; // Don't spawn the item
+
+				FRotator Rotation = Tile.Rotation + Item->Rotation;
+				Rotation.Yaw = CorrectDegrees(Rotation.Yaw);
+
+				FVector Location = Tile.Location + GetPlacementOffset(Tile.Rotation, Item->Location);
+
+				ItemsHandler->HandleNewItem(Item->Key, Location, Rotation);
+			}
+		}
+	}
 }
 
 /*
@@ -194,7 +251,7 @@ FVector UDungeonBuilder::GetPlacementOffset(FRotator Rotation, FVector Location)
 		//UE_LOG(LogTemp, Warning, TEXT("Offset: Yaw not found: %f"), Rotation.Yaw);
 	}
 
-	return FVector();
+	return LocationToReturn;
 }
 
 FRotator UDungeonBuilder::GetSpawnRotation(FRotator FirstRotation, FRotator SecondRotation, FRotator RoomRotation)

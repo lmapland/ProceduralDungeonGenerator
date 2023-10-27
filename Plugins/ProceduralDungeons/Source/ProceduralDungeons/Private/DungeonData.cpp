@@ -4,14 +4,16 @@
 #include "DungeonData.h"
 #include "Engine/DataTable.h"
 
-void UDungeonData::Setup(UDataTable* InRooms, UDataTable* InOpenings, UDataTable* InBarriers)
+void UDungeonData::Setup(UDataTable* InRooms, UDataTable* InOpenings, UDataTable* InBarriers, UDataTable* InItems)
 {
 	DTRooms = InRooms;
 	DTOpenings = InOpenings;
 	DTBarriers = InBarriers;
+	DTItems = InItems;
 
 	DTRooms->GetAllRows<FRoom>(Context, Rooms);
 	DTBarriers->GetAllRows<FBarrier>(Context, Barriers);
+	DTItems->GetAllRows<FDungeonItem>(Context, Items);
 }
 
 FRoom* UDungeonData::GetRoom(FName RoomName)
@@ -36,6 +38,11 @@ FBarrier* UDungeonData::GetRandomBarrier()
 	int32 Rand = FMath::Floor(FMath::RandRange(0, Barriers.Num() - 1));
 
 	return Barriers[Rand];
+}
+
+FDungeonItem* UDungeonData::GetItem(FName ItemName)
+{
+	return DTItems->FindRow<FDungeonItem>(ItemName, Context);
 }
 
 TArray<FOpening*> UDungeonData::GetOpeningsFor(FName RoomName)
