@@ -54,6 +54,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UDataTable* Items;
+	
+	// If your log level is below 3 you may not get the output from the tests you expect
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 LogLevel = 3;
 
 private:
 	UDungeonBuilder* CreateDungeonBuilder();

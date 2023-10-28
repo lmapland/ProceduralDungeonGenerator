@@ -57,13 +57,14 @@ void UDungeonBuilder::CreateNextTiles(FPaperDungeon& PaperDungeon, FPaperDungeon
 	// Base cases / bounds checking
 	if (X < 0 || Y < 0 || X >= PaperDungeon.DungeonSize || Y >= PaperDungeon.DungeonSize || PaperDungeon.Layout[X][Y].IsOccupied)
 	{
-		/*
-		if (X < 0) { UE_LOG(LogTemp, Display, TEXT("X < 0 (%i)"), X); }
-		else if (Y < 0) { UE_LOG(LogTemp, Display, TEXT("Y < 0 (%i)"), Y); }
-		else if (X >= PaperDungeon.DungeonSize) { UE_LOG(LogTemp, Display, TEXT("X >= PaperDungeon.DungeonSize (%i >= %i)"), X, PaperDungeon.DungeonSize); }
-		else if (Y >= PaperDungeon.DungeonSize) { UE_LOG(LogTemp, Display, TEXT("Y >= PaperDungeon.DungeonSize (%i >= %i)"), Y, PaperDungeon.DungeonSize); }
-		else if (PaperDungeon.Layout[X][Y].IsOccupied) { UE_LOG(LogTemp, Display, TEXT("PaperDungeon.Layout[X][Y].IsOccupied (%i, %i)"), X, Y); }
-		*/
+		if (LogLevel >= 4)
+		{
+			if (X < 0) { UE_LOG(LogTemp, Display, TEXT("X < 0 (%i)"), X); }
+			else if (Y < 0) { UE_LOG(LogTemp, Display, TEXT("Y < 0 (%i)"), Y); }
+			else if (X >= PaperDungeon.DungeonSize) { UE_LOG(LogTemp, Display, TEXT("X >= PaperDungeon.DungeonSize (%i >= %i)"), X, PaperDungeon.DungeonSize); }
+			else if (Y >= PaperDungeon.DungeonSize) { UE_LOG(LogTemp, Display, TEXT("Y >= PaperDungeon.DungeonSize (%i >= %i)"), Y, PaperDungeon.DungeonSize); }
+			else if (PaperDungeon.Layout[X][Y].IsOccupied) { UE_LOG(LogTemp, Display, TEXT("PaperDungeon.Layout[X][Y].IsOccupied (%i, %i)"), X, Y); }
+		}
 
 		// There is an Opening and we can't place another room beyond it. Place a Barrier instead
 		PlaceBarrier(PaperDungeon, PreviousOpening, PreviousRoom);
@@ -115,31 +116,31 @@ FVector UDungeonBuilder::GetPlacementOffset(FRotator Rotation, FVector Location)
 
 	if (FMath::IsNearlyEqual(Rotation.Yaw, -360.f, 1.f) || FMath::IsNearlyEqual(Rotation.Yaw, 0.f, 1.f) || FMath::IsNearlyEqual(Rotation.Yaw, 360.f, 1.f))
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("Offset: Yaw is 0"));
+		if (LogLevel >= 4) UE_LOG(LogTemp, Display, TEXT("Offset: Yaw is 0"));
 		return LocationToReturn;
 	}
 	else if (FMath::IsNearlyEqual(Rotation.Yaw, -270.f, 1.f) || FMath::IsNearlyEqual(Rotation.Yaw, 90.f, 1.f))
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("Offset: Yaw is 90"));
+		if (LogLevel >= 4) UE_LOG(LogTemp, Display, TEXT("Offset: Yaw is 90"));
 		LocationToReturn.X = Location.Y;
 		LocationToReturn.Y = Location.X;
 		return LocationToReturn * FVector(-1.f, 1.f, 1.f);
 	}
 	else if (FMath::IsNearlyEqual(Rotation.Yaw, 180.f, 1.f) || FMath::IsNearlyEqual(Rotation.Yaw, 540.f, 1.f))
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("Offset: Yaw is 180"));
+		if (LogLevel >= 4) UE_LOG(LogTemp, Display, TEXT("Offset: Yaw is 180"));
 		return LocationToReturn * FVector(-1.f, -1.f, 1.f);
 	}
 	else if (FMath::IsNearlyEqual(Rotation.Yaw, -90.f, 1.f) || FMath::IsNearlyEqual(Rotation.Yaw, 270.f, 1.f))
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("Offset: Yaw is 270"));
+		if (LogLevel >= 4) UE_LOG(LogTemp, Display, TEXT("Offset: Yaw is 270"));
 		LocationToReturn.X = Location.Y;
 		LocationToReturn.Y = Location.X;
 		return LocationToReturn * FVector(1.f, -1.f, 1.f);
 	}
 	else
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("Offset: Yaw not found: %f"), Rotation.Yaw);
+		if (LogLevel >= 4) UE_LOG(LogTemp, Display, TEXT("Offset: Yaw not found: %f"), Rotation.Yaw);
 	}
 
 	return LocationToReturn;
@@ -147,29 +148,26 @@ FVector UDungeonBuilder::GetPlacementOffset(FRotator Rotation, FVector Location)
 
 FRotator UDungeonBuilder::GetSpawnRotation(FRotator FirstRotation, FRotator SecondRotation, FRotator RoomRotation)
 {
-	//UE_LOG(LogTemp, Warning, TEXT("GetSpawnRotation(): FirstRot, SecondRot, RoomRot: %f, %f, %f"), FirstRotation.Yaw, SecondRotation.Yaw, RoomRotation.Yaw);
+	if (LogLevel >= 5) UE_LOG(LogTemp, Display, TEXT("GetSpawnRotation(): FirstRot, SecondRot, RoomRot: %f, %f, %f"), FirstRotation.Yaw, SecondRotation.Yaw, RoomRotation.Yaw);
 	FRotator OpeningOrientation = FirstRotation + RoomRotation;
 
 	// Get the values between 0 and 360 so the math works well
 	OpeningOrientation.Yaw = CorrectDegrees(OpeningOrientation.Yaw);
 
-	//UE_LOG(LogTemp, Warning, TEXT("Opening Orientation 1: [%f, %f, %f]"), OpeningOrientation.Pitch, OpeningOrientation.Yaw, OpeningOrientation.Roll);
-	//UE_LOG(LogTemp, Warning, TEXT("Opening Orientation 2: [%f, %f, %f]"), SecondOpening->Orientation.Pitch, SecondOpening->Orientation.Yaw, SecondOpening->Orientation.Roll);
-
 	FRotator RotationToSpawn = SecondRotation - OpeningOrientation;
 	if (FMath::IsNearlyEqual(OpeningOrientation.Yaw, SecondRotation.Yaw, 1.f))
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("Yaws are equal; setting rotation to 180.f"));
+		if (LogLevel >= 4) UE_LOG(LogTemp, Display, TEXT("Yaws are equal; setting rotation to 180.f"));
 		RotationToSpawn.Yaw = 180.f;
 	}
 	else if (FMath::IsNearlyEqual(FMath::Abs<float>(OpeningOrientation.Yaw - SecondRotation.Yaw), 180.f, 1.f))
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("Yaws are 180.f apart; will set Rotation to 0.f"));
+		if (LogLevel >= 4) UE_LOG(LogTemp, Display, TEXT("Yaws are 180.f apart; will set Rotation to 0.f"));
 		RotationToSpawn.Yaw = 0.f;
 	}
 
 	RotationToSpawn.Yaw = CorrectDegrees(RotationToSpawn.Yaw);
-	//UE_LOG(LogTemp, Warning, TEXT("Orientation to Rotate: [%f, %f, %f]"), RotationToSpawn.Pitch, RotationToSpawn.Yaw, RotationToSpawn.Roll);
+	if (LogLevel >= 4) UE_LOG(LogTemp, Display, TEXT("Orientation to Rotate: [%f, %f, %f]"), RotationToSpawn.Pitch, RotationToSpawn.Yaw, RotationToSpawn.Roll);
 	return RotationToSpawn;
 }
 
@@ -177,7 +175,7 @@ void UDungeonBuilder::GetNextXY(FRotator OpeningOrientation, FRotator RoomRotati
 {
 	FRotator AbsoluteRotation = OpeningOrientation + RoomRotation;
 	AbsoluteRotation.Yaw = CorrectDegrees(AbsoluteRotation.Yaw);
-	//UE_LOG(LogTemp, Display, TEXT("AbsoluteRotation.Yaw: %f"), AbsoluteRotation.Yaw);
+	if (LogLevel >= 4) UE_LOG(LogTemp, Display, TEXT("AbsoluteRotation.Yaw: %f"), AbsoluteRotation.Yaw);
 
 	if (FMath::IsNearlyEqual(AbsoluteRotation.Yaw, 0.f, 1.f)) NextY -= 1;
 	else if (FMath::IsNearlyEqual(AbsoluteRotation.Yaw, 90.f, 1.f)) NextX -= 1;
@@ -187,26 +185,26 @@ void UDungeonBuilder::GetNextXY(FRotator OpeningOrientation, FRotator RoomRotati
 
 float UDungeonBuilder::CorrectDegrees(float DegreesToCorrect)
 {
-	//UE_LOG(LogTemp, Display, TEXT("CorrectDegrees(): DegreesToCorrect: %f"), DegreesToCorrect);
+	if (LogLevel >= 4) UE_LOG(LogTemp, Display, TEXT("CorrectDegrees(): DegreesToCorrect: %f"), DegreesToCorrect);
 	float Yaw = DegreesToCorrect;
 
 	while (Yaw > 360.f || FMath::IsNearlyEqual(Yaw, 360.f, 1.f))
 	{
-		//UE_LOG(LogTemp, Display, TEXT("CorrectDegrees(): Yaw is >= 360; subtracting 360"));
+		if (LogLevel >= 4) UE_LOG(LogTemp, Display, TEXT("CorrectDegrees(): Yaw is >= 360; subtracting 360"));
 		Yaw -= 360.f;
 	}
 	if (FMath::IsNearlyEqual(Yaw, -0.f, 1.f))
 	{
-		//UE_LOG(LogTemp, Display, TEXT("CorrectDegrees(): Yaw is -0; setting to 0"));
+		if (LogLevel >= 4) UE_LOG(LogTemp, Display, TEXT("CorrectDegrees(): Yaw is -0; setting to 0"));
 		Yaw = 0.f;
 	}
 	else if (Yaw < 0)
 	{
-		//UE_LOG(LogTemp, Display, TEXT("CorrectDegrees(): Yaw is negative; adding 360"));
+		if (LogLevel >= 4) UE_LOG(LogTemp, Display, TEXT("CorrectDegrees(): Yaw is negative; adding 360"));
 		Yaw += 360.f;
 	}
 
-	//UE_LOG(LogTemp, Display, TEXT("CorrectDegrees(): Returning %f "), Yaw);
+	if (LogLevel >= 4) UE_LOG(LogTemp, Display, TEXT("CorrectDegrees(): Returning %f "), Yaw);
 	return Yaw;
 }
 

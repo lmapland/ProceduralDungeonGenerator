@@ -41,6 +41,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool UseItems = true;
 
+	/*
+	* Covers the level of output to the Console.
+	* 0 = No logging at all. Not recommended.
+	* 1 = Print Error messages only
+	* 2 = Print the above and Warning messages only
+	* 3 = Print the above and some basic Display messages
+	* 4 = Print the above and more detailed Display messages
+	* 5 = Print the above and even more messages
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 LogLevel = 3;
+
 private:
 	/* Recursive function called when BuildPaperDungeon() is called that does the real work of building the Dungeon */
 	void CreateNextTiles(FPaperDungeon& PaperDungeon, FPaperDungeonTile& PreviousRoom, FOpening* PreviousOpening, int32 X, int32 Y);
